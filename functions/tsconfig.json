@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    /* --- Module & Target ------------------------------------------------ */
+    // Cloud Functions CommonJS + Node 20 gerektirir (ESM desteği yok).
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "outDir": "lib",
+    "rootDir": "src",
+
+    /* --- Strictness: Projenin temel standardı --------------------------- */
+    // NOT: `noUnusedLocals`/`noUnusedParameters` BİLEREK KAPALI: derleme
+    // sırasında `use-case`'lerde kullanılmayan parametreyi temizlemek yerine
+    // imza tutarlılığını korumak tercih edilir.
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": false,
+    "forceConsistentCasingInFileNames": true,
+
+    /* --- Interop & Emit ------------------------------------------------- */
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "declaration": false,
+    "sourceMap": true,
+    "removeComments": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "lib", "scripts"]
+}

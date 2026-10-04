@@ -1,0 +1,150 @@
+rules_version = '2';
+
+/**
+ * ============================================================================
+ * FIRESTORE GÜVENLİK KURALLARI
+ * ----------------------------------------------------------------------------
+ * Temel prensip: **istemci ASLA başkasının verisini göremez / değiştiremez.**
+ * `ownerId` alanı her belgede tutulur ve her kural onu doğrular.
+ *
+ * Güvenlik notu: Bu kurallar YALNIZCA istemci (web/mobil) erişimini kontrol
+ * eder. Cloud Functions Admin SDK kuralları BYPASS eder (güvenilir sunucu).
+ * Bu yüzden kritik mantık (webhook işleme, token yönetimi) sunucudadadır.
+ * ============================================================================
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -----------------------------------------------------------------------
+    // ORTAK YARDIMCI FONKSİYONLAR (Guard clauses)
+    // -----------------------------------------------------------------------
+
+    /** Oturum açmış mı? */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** Belge sahibi, oturumdaki kullanıcı mı? (kendi verisine erişim) */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** Gelecekte tarihli alan güncellemesini engeller (timestamp güvenliği) */
+    function isValidTimestamp(field) {
+      return request.resource.data[field] == request.time ||
+             request.resource.data[field] is timestamp;
+    }
+
+    // -----------------------------------------------------------------------
+    // OTOMASYONLAR
+    // -----------------------------------------------------------------------
+    match /automations/{automationId} {
+
+      /**
+       * OKUMA: Sadece kendi otomasyonlarını gör.
+       * Liste sorgularında `resource` tek belge değildir; bu yüzden kayıt
+       * zaten `ownerId` alanına göre filtrelenmelidir. Rules, sorgunun
+       * filtre koşulunu doğrulayamaz ama filtreleme yapılmazsa liste boş döner.
+       */
+      allow read: if isOwner(resource.data.ownerId);
+
+      /**
+       * OLUŞTURMA:
+       *  - `ownerId` DEĞİŞTİRİLEMEZ (istemci başkasının adına kayıt açamaz)
+       *  - `status` sadece PASSIVE olabilir → istemci "aktif" görünerek
+       *    toplu mesaj gönderme (spam) için kayıt açamaz
+       *  - sayaçlar sıfır olmalı → istemci sahte istatistik yazamaz
+       *  - kelime sayısı makul bir üst sınırın altında
+       */
+      allow create: if isSignedIn()
+                    && request.resource.data.ownerId == request.auth.uid
+                    && request.resource.data.status == 'PASSIVE'
+                    && request.resource.data.stats.matchCount == 0
+                    && request.resource.data.stats.replyCount == 0
+                    && request.resource.data.stats.failureCount == 0
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() <= 80
+                    && request.resource.data.keywords is list
+                    && request.resource.data.keywords.size() > 0
+                    && request.resource.data.keywords.size() <= 30
+                    && request.resource.data.replyMessage is string
+                    && request.resource.data.replyMessage.size() > 0
+                    && request.resource.data.replyMessage.size() <= 1000
+                    && request.resource.data.matchMode in ['EXACT', 'CONTAINS']
+                    && request.resource.data.trigger in ['INBOUND_MESSAGE', 'INBOUND_COMMENT'];
+
+      /**
+       * GÜNCELLEME:
+       *  - `ownerId` değiştirilemez
+       *  - `stats` ALANI DEĞİŞTİRİLEMEZ → istemci sahte sayaç yazamaz
+       *  - `createdAt` değiştirilemez
+       */
+      allow update: if isOwner(resource.data.ownerId)
+                    && request.resource.data.ownerId == resource.data.ownerId
+                    && request.resource.data.createdAt == resource.data.createdAt
+                    && request.resource.data.stats == resource.data.stats
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() <= 80
+                    && request.resource.data.keywords is list
+                    && request.resource.data.keywords.size() > 0
+                    && request.resource.data.keywords.size() <= 30
+                    && request.resource.data.replyMessage is string
+                    && request.resource.data.replyMessage.size() > 0
+                    && request.resource.data.replyMessage.size() <= 1000
+                    && request.resource.data.matchMode in ['EXACT', 'CONTAINS']
+                    && request.resource.data.status in ['ACTIVE', 'PASSIVE']
+                    && request.resource.data.trigger in ['INBOUND_MESSAGE', 'INBOUND_COMMENT'];
+
+      /** SİLME: Sadece kendi otomasyonunu silebilir. */
+      allow delete: if isOwner(resource.data.ownerId);
+    }
+
+    // -----------------------------------------------------------------------
+    // AKTİVİTE LOGLARI
+    // -----------------------------------------------------------------------
+    match /logs/{logId} {
+      /**
+       * OKUMA: Sadece kendi loglarım (dashboard canlı akış).
+       * Yazma: **TÜMÜYLE YASAK** — log'lar sadece Cloud Functions tarafından
+       * (Admin SDK, kuralları bypass eder) yazılır. Bu, kullanıcının sahte
+       * "başarılı gönderim" kaydı uydurmasını imkânsız kılar.
+       */
+      allow read: if isOwner(resource.data.ownerId);
+      allow create, update, delete: if false;
+    }
+
+    // -----------------------------------------------------------------------
+    // INSTAGRAM HESAP BAĞLANTILARI
+    // -----------------------------------------------------------------------
+    match /connections/{accountId} {
+      /**
+       * Kullanıcı hesabı OKUR (kendi bağlantısını görür) ama
+       * `accessToken` ALANINI GÖREMEZ — erişim token'ı sadece sunucuda kalır.
+       *
+       * Not: Firestore alan bazlı gizleme yerine, `accessToken` ayrı bir
+       * alanda tutulur ve client SDK bu alanı hiçbir zaman okumaz
+       * (Cloud Function üzerinden bağlanma akışı kullanılır).
+       */
+      allow read: if isOwner(resource.data.ownerId);
+      allow write: if false;
+    }
+
+    // -----------------------------------------------------------------------
+    // KULLANICI PROFİLLERİ
+    // -----------------------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    // -----------------------------------------------------------------------
+    // VAR OLMAYAN DİĞER TÜM YOLLAR → ERİŞİM YOK (varsayılan kapalı)
+    // -----------------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

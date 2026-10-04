@@ -1,0 +1,72 @@
+# ============================================================================
+# DEPENDANSLAR
+# ============================================================================
+node_modules/
+.pnp
+.pnp.js
+
+# ============================================================================
+# BUILD ÇIKTILARI
+# ============================================================================
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Firebase Functions
+functions/lib/
+functions/*.local
+functions/yarn.lock
+
+# Firebase Emulator
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+ui-debug.log
+firestore-debug.log
+
+# ============================================================================
+# ORTAM DEĞİŞKENLERİ — ASLA COMMIT EDİLMEZ
+# ============================================================================
+# SIRA ÖNEMLİ: Git'te sonraki kural önceliklidir. Bu yüzden .env.example
+# negation'ları EN SON'a konur; aksi halde aşağıdaki wildcard'lar onları
+# tekrar dışlar ve şablon dosyalar depoya giremez.
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+functions/.env
+functions/.env.*
+
+# --- Şablonlar (placeholder'lı, gizli bilgi İÇERMEZ) commit edilir ---
+!.env.example
+!functions/.env.example
+
+# ============================================================================
+# SERVİS HESABI JSON'LARI (Firebase CLI bunları oluşturur)
+# ============================================================================
+*-firebase-adminsdk-*.json
+service-account*.json
+
+# ============================================================================
+# SİSTEM / EDITÖR
+# ============================================================================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# ============================================================================
+# LOGLAR
+# ============================================================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# TypeScript build info
+tsconfig.tsbuildinfo
+functions/tsconfig.tsbuildinfo

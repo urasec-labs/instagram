@@ -1,0 +1,16 @@
+{
+  "root": true,
+  "extends": ["next/core-web-vitals"],
+  "rules": {
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "eqeqeq": ["error", "smart"],
+    "no-var": "error",
+    "prefer-const": "error"
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    ".next/",
+    "functions/",
+    "public/"
+  ]
+}
