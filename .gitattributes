@@ -1,0 +1,50 @@
+# ============================================================================
+# GIT ATTRIBUTES
+# ----------------------------------------------------------------------------
+# Amaç: Farklı işletim sistemlerinde (Windows CRLF / macOS-Linux LF) aynı
+# dosyanın farklı görünmesini engellemek. Özellikle deploy edilen scriptlerde
+# satır sonu farkı çalışma zamanı hatasına yol açabilir.
+# ============================================================================
+
+# --- Varsayılan: metin dosyaları depoda LF, checkout'ta platform varsayılanı ---
+* text=auto
+
+# --- Kaynak kod ve config: her yerde LF (deterministik diff) ----------------
+*.ts            text eol=lf
+*.tsx           text eol=lf
+*.js            text eol=lf
+*.mjs           text eol=lf
+*.json          text eol=lf
+*.md            text eol=lf
+*.css           text eol=lf
+*.mjs           text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+.eslintrc.json  text eol=lf
+.firebaserc     text eol=lf
+
+# --- Binary dosyalar: asla normalize edilmez --------------------------------
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.ico           binary
+*.webp          binary
+*.woff          binary
+*.woff2         binary
+
+# --- Lock dosyaları: birebir korunur ----------------------------------------
+package-lock.json    binary
+functions/package-lock.json  binary
+
+# --- Diff/merge davranışı ---------------------------------------------------
+# README ve dokümantasyon: satır sonu değişikliği diff gürültüsü yaratmasın
+*.md diff=markdown
+*.md merge=union
+
+# --- .env dosyaları (binary gibi işle: içerik diff'lenmesin) ----------------
+.env            text eol=lf
+functions/.env  text eol=lf
+
+# --- Firebase rules: sunucu tarafı dil olduğu için LF zorunlu -----------------
+firestore.rules text eol=lf
